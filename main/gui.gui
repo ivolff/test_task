@@ -1,7 +1,7 @@
 script: "/main/gui.gui_script"
 fonts {
-  name: "system_font"
-  font: "/builtins/fonts/system_font.font"
+  name: "openSans"
+  font: "/assets/openSans.font"
 }
 textures {
   name: "atlas"
@@ -100,8 +100,8 @@ nodes {
   }
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
-  text: "Score: 0"
-  font: "system_font"
+  text: "\320\241\321\207\320\265\321\202: 0"
+  font: "openSans"
   id: "score"
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE
@@ -218,8 +218,8 @@ nodes {
   }
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
-  text: "Start"
-  font: "system_font"
+  text: "\320\241\321\202\320\260\321\200\321\202"
+  font: "openSans"
   id: "button_text"
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE
@@ -282,7 +282,7 @@ nodes {
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
   text: ""
-  font: "system_font"
+  font: "openSans"
   id: "lose"
   xanchor: XANCHOR_NONE
   yanchor: YANCHOR_NONE

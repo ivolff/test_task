@@ -7,7 +7,7 @@ end
 
 local function set_score(score)
 	local scorenode = gui.get_node("score")
-	gui.set_text(scorenode, "Score: " .. score)
+	gui.set_text(scorenode, "Счет: " .. score)
 end
 
 function on_message(self, message_id, message, sender)
@@ -20,7 +20,7 @@ function on_message(self, message_id, message, sender)
 			set_score(self.score)
 		else
 			local loose_text = gui.get_node('lose')
-			gui.set_text(loose_text, "Game Over \n Your score: "..self.score)
+			gui.set_text(loose_text, "Игра Оконченна \n Счет: "..self.score)
 			msg.post('/level#level', "release_input_focus")
 		end
 	end
@@ -44,7 +44,7 @@ function on_input(self, action_id, action)
 				msg.post('/level#level', 'start_game')
 				
 				local button = gui.get_node('button_text')
-				gui.set_text(button, "Restart")
+				gui.set_text(button, "Рестарт")
 				
 				self.game_runs = true
 			end
