@@ -1,0 +1,19 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[script]
+shared_state = 1
+
+[display]
+width = 640
+height = 704
+
+[android]
+input_method = HiddenInputField
+
+[project]
+title = Test task
+
+[sprite]
+max_count = 512
+

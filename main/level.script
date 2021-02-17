@@ -1,0 +1,80 @@
+local function do_coords(x, y)
+	return vmath.vector3((x + 1) * 64 - 32, (y + 1) * 64 - 32 + 64,1)
+end
+
+local function do_level(self)
+	for x = 0, 9 do
+		for y = 0, 9 do
+			local coords = do_coords(x, y)
+			local color =  math.random(2)
+			local token_id = factory.create('#tokenfactory', coords, nil, {color = color})
+			self.tokens[x..':'..y] = token_id
+		end
+	end
+end
+
+local function show_colors(self)
+	for x = 0, 9 do
+		for y = 0, 9 do
+			msg.post(self.tokens[x..':'..y], "show_color",{demo = true})
+		end
+	end
+	self.time = 0
+end
+
+local function hide_colors(self)
+	for x = 0, 9 do
+		for y = 0, 9 do
+			msg.post(self.tokens[x..':'..y], "hide_color")
+		end
+	end
+end
+
+local function restart_game(self)
+	for x = 0, 9 do
+		for y = 0, 9 do
+			if(self.tokens[x..':'..y]) then
+				go.delete(self.tokens[x..':'..y])
+			end
+		end
+	end
+	self.tokens = {}
+	do_level(self)
+	show_colors(self)
+end
+
+function init(self)
+	self.tokens = {}
+	self.time = 1000
+	math.randomseed(os.clock())
+	do_level(self)
+end
+
+function update(self, dt)
+	if self.time < 3 then 
+		self.time = self.time + dt
+	elseif self.time < 1000 then
+		hide_colors(self)
+		self.time = 1000
+		msg.post('.', "acquire_input_focus")
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash('start_game') then
+		show_colors(self)
+	elseif message_id == hash('restart_game') then
+		restart_game(self)
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == hash('touch') and action.pressed then 
+		local x = math.ceil(action.x/64) - 1
+		local y = math.ceil((action.y - 64)/64) - 1
+		local token = self.tokens[x..':'..y]
+		if token then
+			msg.post(token, "show_color",{demo = false})
+		end
+	end
+end

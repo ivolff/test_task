@@ -1,0 +1,53 @@
+function init(self)
+	msg.post('.', 'acquire_input_focus')
+	self.game_runs = false
+	self.score = 0
+	self.cur_color = 0
+end
+
+local function set_score(score)
+	local scorenode = gui.get_node("score")
+	gui.set_text(scorenode, "Score: " .. score)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash('flip_token') then
+		if self.cur_color == 0 then
+			self.cur_color = message.color
+		end
+		if self.cur_color == message.color then
+			self.score = self.score + 1
+			set_score(self.score)
+		else
+			local loose_text = gui.get_node('lose')
+			gui.set_text(loose_text, "Game Over \n Your score: "..self.score)
+			msg.post('/level#level', "release_input_focus")
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == hash('touch') then
+		local node = gui.get_node("button")
+		if action.pressed and gui.pick_node(node, action.x, action.y) then
+			if self.game_runs then
+				msg.post('/level#level', 'restart_game')
+
+				self.score = 0
+				set_score(self.score)
+
+				local loose_text = gui.get_node('lose')
+				gui.set_text(loose_text, "")
+				
+				self.cur_color = 0
+			elseif not self.game_runs then
+				msg.post('/level#level', 'start_game')
+				
+				local button = gui.get_node('button_text')
+				gui.set_text(button, "Restart")
+				
+				self.game_runs = true
+			end
+		end
+	end
+end
