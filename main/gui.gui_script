@@ -31,6 +31,7 @@ function on_input(self, action_id, action)
 		local node = gui.get_node("button")
 		if action.pressed and gui.pick_node(node, action.x, action.y) then
 			if self.game_runs then
+				msg.post('/level#level', "release_input_focus")
 				msg.post('/level#level', 'restart_game')
 
 				self.score = 0
