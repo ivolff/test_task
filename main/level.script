@@ -1,5 +1,6 @@
+--переходим от координат поля к координатам в пикселях
 local function do_coords(x, y)
-	return vmath.vector3((x + 1) * 64 - 32, (y + 1) * 64 - 32 + 64,1)
+	return vmath.vector3((x + 1) * 64 - 32, (y + 1) * 64 - 32 + 64,0.5)
 end
 
 local function do_level(self)
@@ -9,6 +10,7 @@ local function do_level(self)
 			local color =  math.random(2)
 			local token_id = factory.create('#tokenfactory', coords, nil, {color = color})
 			self.tokens[x..':'..y] = token_id
+			self.tokens_status[x..':'..y] = 0
 		end
 	end
 end
@@ -31,6 +33,7 @@ local function hide_colors(self)
 end
 
 local function restart_game(self)
+	--чистим поле
 	for x = 0, 9 do
 		for y = 0, 9 do
 			if(self.tokens[x..':'..y]) then
@@ -39,13 +42,116 @@ local function restart_game(self)
 		end
 	end
 	self.tokens = {}
+
+	--заново заполняем поле
 	do_level(self)
 	show_colors(self)
+	self.delete_counter = 0
+end
+
+--переходим от пиксельных координат к координатам на поле
+local function translate_x(x)
+	return math.ceil(x/64) - 1
+end
+
+local function translate_y(y)
+	return math.ceil((y - 64)/64) - 1
+end
+
+local function touch_start(self, action)
+	--переводим координаты в систему клеток поля
+	self.start_x = translate_x(action.x) 
+	self.start_y = translate_y(action.y)
+
+	--считаем отступы от места куда кликнули до центра токена(чтобы небыло скачка при тапе)
+	local ofset_coords = do_coords(self.start_x, self.start_y) 
+	self.start_x_offset = action.x - ofset_coords.x
+	self.start_y_offset = action.y - ofset_coords.y
+
+	--проверяем что этот токен еще не открыли и не удалили
+	local token_status = self.tokens_status[self.start_x..':'..self.start_y]
+	if token_status ~= 0 then
+		return
+	end
+
+	--запоминаем какой токен муваем чтоб 25 раз не тыкатсья в массив
+	self.cur_token = self.tokens[self.start_x..':'..self.start_y]
+	
+	--говорим что начали движение
+	self.moving = true
+end
+
+
+local function touch_continue(self, action)
+	local y = translate_y(action.y)
+	local x = translate_x(action.x)
+
+	--тащим токен за курсором с поправкой на отступы
+	if self.cur_token then
+		go.set_position(vmath.vector3(action.x - self.start_x_offset, action.y - self.start_y_offset, 1), self.cur_token)
+	end
+
+	--проверяем вышли ли мы за пределы поля этого токена (если вышли то в это перетаскивание он уже не первернется)
+	--трекаем без поправки на отступы, мне показалось так интуитивнее
+	if x ~= self.start_x or y ~= self.start_y then
+		self.stay_in_token = false
+	end
+end
+
+local function touch_end(self, action)
+	local y = translate_y(action.y)
+	local x = translate_x(action.x)
+
+	--еще раз проверяем не вышли ли за поле токена
+	if x ~= self.start_x or y ~= self.start_y then
+		self.stay_in_token = false
+	end
+
+	--проверяем вышел ли курсор за игровое поле, если вышел и мы удалили меньше 3х токенов за игру,
+	--удаляем токен, инкрементируем счетчик удалений и ставим ему статус 1
+	if (x > 9 or x < 0 or y >9 or y < 0) and self.delete_counter < 3 then
+		self.tokens_status[self.start_x..':'..self.start_y] = 1
+		if self.cur_token then
+			self.delete_counter = self.delete_counter + 1
+			go.delete(self.cur_token)
+			self.tokens[self.start_x..':'..self.start_y] = nil
+		end
+	--проверяем нужно ли нам показывать цвет, если надо то показываем и ставим статус 2
+	elseif self.stay_in_token then
+		self.tokens_status[self.start_x..':'..self.start_y] = 2
+		local token = self.tokens[x..':'..y]
+		if token then
+			msg.post(token, "show_color",{demo = false})
+		end
+	end
+
+	--если не удалили, возвращаем токен в исходную позицию
+	if self.cur_token and self.tokens_status[self.start_x..':'..self.start_y] ~= 1 then
+		go.set_position(do_coords(self.start_x, self.start_y), self.cur_token)
+	end
+
+	--заново сетим все дефолтными значениями
+	self.moving = false
+	self.stay_in_token = true
+	self.start_x = 0
+	self.start_y = 0
+	self.cur_token = 0
+	self.start_x_offset = 0
+	self.start_y_offset = 0
 end
 
 function init(self)
 	self.tokens = {}
+	self.tokens_status = {}
 	self.time = 1000
+	self.start_x = 0
+	self.start_y = 0
+	self.start_x_offset = 0
+	self.start_y_offset = 0
+	self.moving = false
+	self.stay_in_token = true
+	self.cur_token = 0
+	self.delete_counter = 0
 	math.randomseed(os.clock())
 	do_level(self)
 end
@@ -69,12 +175,25 @@ function on_message(self, message_id, message, sender)
 end
 
 function on_input(self, action_id, action)
-	if action_id == hash('touch') and action.pressed then 
-		local x = math.ceil(action.x/64) - 1
-		local y = math.ceil((action.y - 64)/64) - 1
-		local token = self.tokens[x..':'..y]
-		if token then
-			msg.post(token, "show_color",{demo = false})
-		end
+	if action_id == hash('touch') and action.pressed  then 
+		touch_start(self, action)
+	elseif action_id == hash('touch') and action.released and self.moving then
+		touch_end(self, action)
+	elseif action_id == hash('touch') and self.moving then
+		touch_continue(self, action)
 	end
 end
+
+--версия функции для версии без удаления
+--function on_input(self, action_id, action) 
+--	if action_id == hash('touch') and action.pressed  then 
+--		local x = math.ceil(action.x/64) - 1
+--		local y = math.ceil((action.y - 64)/64) - 1
+--		local token = self.tokens[x..':'..y]
+--		if token then
+--			msg.post(token, "show_color",{demo = false})
+--		end
+--	elseif action_id == hash('touch') then
+--		print(action)
+--	end
+--end

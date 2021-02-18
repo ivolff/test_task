@@ -5,9 +5,7 @@ local colors = {[0] = hash('1grey'),
 				[2] = hash('1blue')}
 
 function init(self)
-	if self.color ~= 0 then
-		msg.post("#sprite", "play_animation", {id = colors[0]})
-	end
+	msg.post("#sprite", "play_animation", {id = colors[0]})
 	self.is_opened = false
 end
 
